@@ -24,18 +24,22 @@ para_sigma = 1;
 if(strcmp(kernel_type,'linear'))
     kernelX = train_data * train_data';
     kernelXX = val_data * train_data';
+    
+    kernel_sum = [(1:N_Tr)', kernelX + 0.00001*eye(size(kernelX))]; % avoid low rank
+    kernel_sumXX = [(1:N_Val)', kernelXX + 0.00001*eye(size(kernelXX))]; % avoid low rank
 elseif(strcmp(kernel_type,'RBF'))
-    kernelX=RBF_kernel(train_data, para_sigma);
+    kernelX = RBF_kernel(train_data, para_sigma);
     kernelXX = RBF_kernel(val_data,para_sigma,train_data);
+    
+    kernel_sum = [(1:N_Tr)', kernelX + 0.00001*eye(size(kernelX))]; % avoid low rank
+    kernel_sumXX = [(1:N_Val)', kernelXX + 0.00001*eye(size(kernelXX))]; % avoid low rank
 else
-    kernelX = train_data;
-    kernelXX = val_data;
+    kernel_sum = train_data;
+    kernel_sumXX = val_data;
 end
-kernel_sum = [(1:N_Tr)', kernelX + 0.00001*eye(size(kernelX))]; % avoid low rank
-kernel_sumXX = [(1:N_Val)', kernelXX + 0.00001*eye(size(kernelXX))]; % avoid low rank
+
 
 models = cell(1,L);
-
 
 % now train classifier for each label
 %% first we need modify the original feature
@@ -52,23 +56,27 @@ for l = 1 : L
     fprintf('... ... Num of pos: %d, neg: %d \n', prior_pos, prior_neg);
     ratio = floor(prior_neg / (prior_pos+1));
     
-    model = svmtrain(train_targets,kernel_sum,['-t 4 -q -b 1 -c ',num2str(lambda),...
-    ' -w1 ', num2str(ratio), ' -w-1 1']);
+%     model = svmtrain(train_targets,kernel_sum,['-t 4 -q -b 1 -c ',num2str(lambda),...
+%     ' -w1 ', num2str(ratio), ' -w-1 1']);
         
     if is_cv
         param.ratio = ratio;
-        param.c_list = [-5:1:5];
-        param.g_list = [-5:1:5];
-        optimals = cv_train(train_targets, kernel_sum, param);
-        fprintf('... ... %d-th classifier, optimal C %f, optimal g %f \n', l, optimals.c, optimals.g);
-        model = svmtrain(train_targets, kernel_sum, ...
-            ['-q -t 4 -b 1 -c ', num2str(optimals.c), ' -g ', num2str(optimals.g)]);
-%         [tmp1,tmp2,dec_val] = svmpredict(val_targets, kernel_sum, model, '-b 1');
+        param.c_list = [-2:1:7];
+        param.g_list = [-2:1:2];
+        optimals = cv_train_val(train_targets, kernel_sum, val_targets, kernel_sumXX, param);
+%         fprintf('... ... %d-th classifier, optimal C %f, optimal g %f \n', l, optimals.c, optimals.g);
+        if ~isempty(optimals)
+            model = svmtrain(train_targets, kernel_sum, ...
+                ['-q -t 4 -b 1 -c ', num2str(optimals.c), ' -g ', num2str(optimals.g)]);
+        else
+            model = svmtrain(train_targets, kernel_sum, ['-t 4 -q -b 1 -c 10 -g 0.2']);
+            optimals.c = 10;
+        end
     else
         model = svmtrain(train_targets, kernel_sum, ['-t 4 -q -b 1 -c 10 -g 0.2']);
     end
     
-    [~,~,p] = svmpredict(val_targets, kernel_sumXX, model, '-b 1');
+%     [~,~,p] = svmpredict(val_targets, kernel_sumXX, model, '-b 1');
 %     prob = p(:,model.Label==1);
 
     if prob_platt
@@ -80,6 +88,7 @@ for l = 1 : L
         models{l}.B = B;
     else
         models{l}.model = model;
+        models{l}.c = optimals.c;
     end
 end
 
@@ -119,5 +128,54 @@ optimals.g = bestg;
 
 fprintf('...... cv finished! \n C %f, gamma %f \n best param %s \n',...
     optimals.c, optimals.g, bestparam);
+
+end
+
+
+
+function [optimals] = cv_train_val(train_label, train_data, val_label, val_data, options)
+% do cross validation to find best C and gamma
+bestcv = 0; 
+bestc = 0;
+bestg = 0;
+optimals = [];
+
+numLog2c = length(options.c_list);
+numLog2g = length(options.g_list);
+cvMatrix = zeros(numLog2c, numLog2g);
+
+for i = 1: numLog2c
+    for j = 1: numLog2g
+        log2g = options.g_list(j);
+        log2c = options.c_list(i);
+        param = ['-q -t 4 -b 1 -c ', num2str(2^log2c), ' -g ', num2str(2^log2g)];
+        model = svmtrain(train_label, train_data, param);
+        [~,accuracy,~] = svmpredict(val_label, val_data, model, ' -b 1 ');
+        
+        if ~isempty(accuracy)
+            cv = accuracy(1);
+            cvMatrix(i, j) = cv;
+            if cv >= bestcv
+                bestcv = cv;
+                bestc = 2^log2c;
+                bestg = 2^log2g;
+                bestparam = param;
+            end
+        else
+            continue;
+        end
+    end
+end
+
+if bestcv ~= 0
+    optimals.c = bestc;
+    optimals.g = bestg;
+    fprintf('...... cv finished! \n C %f, gamma %f \n best param %s \n',...
+    optimals.c, optimals.g, bestparam);
+else
+    fprintf('... Input data error, no best parameter obtained! ..\n');
+end
+
+
 
 end

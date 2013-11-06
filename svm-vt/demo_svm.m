@@ -2,7 +2,7 @@ function [] = demo_svm()
 % This function is a demo code for conventional svm
 clc;
 %% first config mat file path, load needed data
-COREL5K_PATH = 'C:\workspace\program\image-annotation\weakly learning\RelatedCode\fasttag\data\corel5k\';
+COREL5K_PATH = 'D:\workspace-limu\image-annotation\icme2014\RelatedCodes\fasttag\data\corel5k\';
 
 %load original train&test features and labels information
 load([COREL5K_PATH, 'data,dimen=1000.mat']);
@@ -33,8 +33,9 @@ yTr = double(yTrp');
 %% now train L classifiers use libsvm
 options.kernel = 'linear'; %linear, RBF
 options.platt = 0;
+options.cv = 1;
     
-if 0
+if 1
     [models] = svm_train(xTr, yTrp, valIdx, options);
     save(fullfile(COREL5K_PATH, 'models.mat'),'models');
 else
