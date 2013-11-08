@@ -22,7 +22,7 @@ for ii = 1:maxLayers
 
 	if ii == 1
 % 		P = Lfreq*weightedMb.*repmat(q', r, 1);
-        P = updateP(Lfreq*weightedMb, rWfreq);
+        P = updateP(Lfreq*weightedMb, rW, rWfreq);
 	else
 		P = Sl(1:end-1, :).*repmat(q', k, 1);
 	end
@@ -56,14 +56,22 @@ end
 
 end
 
-function P = updateP(P1, rWfreq)
+function P = updateP(P1, rW, rWfreq)
 % P kxk rWfreq kxN
 P = zeros(size(P1));
 N = size(rWfreq,2);
 
-for n = 1 : N
-    M = [rWfreq(:,n);1];
-    P = P + diag(rWfreq(:,n))*P1*diag(M)';
+if size(P1, 2) == size(rWfreq,1) + 1
+    for n = 1 : N
+        M = [rWfreq(:,n);1];
+        P = P + diag(rWfreq(:,n))*P1*diag(M)';
+    end
+elseif size(P1, 2) == size(rW,1) + 1
+    for n = 1 : N
+        M = [rWfreq(:,n);1];
+        T = [rW(:,n);1];
+        P = P + diag(rWfreq(:,n))*P1*diag(T)';
+    end
 end
 
 P = P / N;

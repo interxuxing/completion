@@ -27,7 +27,8 @@ for optIter = 1:size(hyperparams, 2)
 	Sx = xTr(:, instanceIdx)*spdiags(weights', 0, length(weights), length(weights))*xTr(:, instanceIdx)';
 	invSx = spdiags(weights', 0, length(weights), length(weights))*xTr(:, instanceIdx)'/(Sx+beta*iW);
 
-	[Ms, Ws, Bs] = optBW(yTr(tagIdx, instanceIdx), yTr(:, instanceIdx), alpha, noise, layers, weights, invSx, xTr(:, instanceIdx));
+	[Ms, Ws, Bs] = optBW(yTr(tagIdx, instanceIdx), yTr(:, instanceIdx), alpha, noise, ...
+        layers, weights, invSx, xTr(:, instanceIdx), rW(tagIdx, instanceIdx), rW(:, instanceIdx));
 	
 	W(tagIdx, :) = Ws{layers};	
 	predTe = W*xTe;

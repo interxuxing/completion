@@ -3,6 +3,8 @@ addpath('preprocess/')
 addpath('baseline/')
 addpath('fasttag/')
 
+clc;
+
 topK = 5;
 dimen = 1000;
 
@@ -15,17 +17,17 @@ for i = 1
 	dataFolder = ['./data/', dataset, '/'];
 
 	filename=[dataFolder, 'data,dimen=', num2str(dimen), '.mat']; 
-    filename_t = [dataFolder, 'tolerance.mat'];
 	if exist(filename)
 		load(filename);
-        load(filename_t);
 	else
 		% preprocessing, includes approximated additive kernel mapping and random projection to reduce dimension
 		[xTr, yTr, xTe, yTe, valIdx] = loaddata(dataFolder, dimen);	
 	end
 
-	xTr = double(xTr(1:200,:));
-	xTe = double(xTe(1:200,:));
+% 	xTr = double(xTr(1:200,:));
+% 	xTe = double(xTe(1:200,:));
+    xTr = double(xTr);
+	xTe = double(xTe);
 	yTr = double(yTr);
 	yTe = double(yTe);
 

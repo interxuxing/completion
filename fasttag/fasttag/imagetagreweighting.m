@@ -9,7 +9,7 @@ function weights = imagetagreweighting(tagMatrix, featureMatrix)
 [M, N] = size(tagMatrix);
 [D, N] = size(featureMatrix);
 
-weights = ones(D, N);
+weights = ones(M, N);
 
 % now generate label-specific positive / negative indexes
 for m = 1 : M
