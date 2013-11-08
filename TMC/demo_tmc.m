@@ -1,9 +1,12 @@
 function demo_tmc()
 %%  This script is a demo of tmc method for tag completion problem in PAMI2013
 
+clc;
 %% Initialize configuration: path, parameters
-COREL5K_PATH = 'C:\workspace\program\image-annotation\icme2014\tag-completion\completion\svm-vt\mat_corel5k\';
-
+% laptop
+% COREL5K_PATH = 'C:\workspace\program\image-annotation\icme2014\tag-completion\completion\svm-vt\mat_corel5k\';
+% desktop
+COREL5K_PATH = 'D:\workspace-limu\image-annotation\icme2014\RelatedCodes\corel5k\';
 
 param.lambda = 1;
 param.mu = 1;
@@ -21,9 +24,15 @@ V = DenseSift_train;
 load([COREL5K_PATH, 'corel5k_DenseSift_test.mat']); %nxd
 Vt = DenseSift_test;
 
+% load([COREL5K_PATH, 'corel5k_Gist_train.mat']); %nxd
+% V = double(Gist_train);
+% load([COREL5K_PATH, 'corel5k_Gist_test.mat']); %nxd
+% Vt = double(Gist_test);
+
 load([COREL5K_PATH, 'corel5k_test_annot.mat']);
 yTe_gt = double(test_annot);
-
+% here we use an incomplete annotation matrix for training
+% only 50% tags are preserved
 load([COREL5K_PATH, 'corel5k_anno_50.mat']); % nxm
 T_cap_train = yTrp;
 T_cap_test = yTep;
@@ -35,17 +44,15 @@ T_cap_test = yTep;
 
 n = n_tr + n_te;
 
+% fuse train matrix and test matrix, (test matrix with zero initial tags)
 V = [V; Vt];
 T_cap = [T_cap_train; zeros(size(T_cap_test))];
-
+train_idx = [1 : n_tr];
 test_idx = [n_tr+1 : n];
-
-R = T_cap'*T_cap;
-
-
-
-
-
+% calculate R matrix
+% R = T_cap'*T_cap;
+% R = calc_R(T_cap);
+load('R.mat');
 
 wt = ones(d,1);
 Tt = T_cap;
@@ -54,10 +61,11 @@ Topt = [];
 wopt = [];
 
 Loss = zeros(maxIter, 1);
-Loss(1) = calc_loss(Tt, T_cap, V, R, wt, param);
-
+Loss(1) = calc_loss(Tt(train_idx,:), T_cap(train_idx,:), V(train_idx,:), R, wt, param);
+% sub-gradient descend method to optimize T and w
+% Tt1 -> T_(t+1), Tt -> T_t
 for t = 1 : maxIter
-    stepsize = 1 / (t+1);
+    stepsize = 1 / t^2;
     G = (Tt * Tt') - V*diag(wt)*V';
     H = (Tt'*Tt - R);
     gT = 2*G* Tt + ...
@@ -65,6 +73,8 @@ for t = 1 : maxIter
         2*param.ita*(Tt - T_cap);
     
     gW = -2*diag(V'*G*V);
+    
+    fprintf('... Iteration %d, max gT %f, max gW %f \n', t, max(abs(gT(:))), max(abs(gW)));
     
     Tt1_cap = Tt - stepsize * gT;
     wt1_cap = wt - stepsize * gW;
@@ -77,8 +87,10 @@ for t = 1 : maxIter
     
     Tt = Tt1;
     wt = wt1;
+%     T_cap = Tt1_cap;
+%     R = T_cap' * T_cap;
     
-    Loss(t+1) = calc_loss(Tt1, T_cap, V, R, wt1, param);
+    Loss(t+1) = calc_loss(Tt1(train_idx,:), T_cap(train_idx,:), V(train_idx,:), R, wt1, param);
     
     ratio = norm((Loss(t+1) - Loss(t)) / Loss(t));
     
@@ -96,12 +108,20 @@ end
 fprintf('tmc method finished!\n');
 
 
-
-
-
-
 end
 
+function R = calc_R(tag_matrix)
+    [n, m] = size(tag_matrix);
+    R = zeros(m,m);
+    for j = 1 : m
+        for k = 1 : m
+            A = tag_matrix(:,j);
+            B = tag_matrix(:,k);
+            R(j,k) = norm(A .* B,1) / (norm(A,1)+norm(B,1) - norm(A .* B,1));
+        end
+    end
+    R(isnan(R)) = 0;
+end
 
 function res = calc_loss(T, T_cap, V, R, w, param)
 l1 = T*T' - V * diag(w) * V';
@@ -112,3 +132,4 @@ res = norm(l1, 'fro') + param.lambda * norm(l2, 'fro') + ...
     param.ita * norm(l3, 'fro') + param.mu*norm(T, 1) + param.gamma*norm(w,1);
 
 end
+
