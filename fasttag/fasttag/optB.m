@@ -12,8 +12,13 @@ for ii = 1:maxLayers
 	Mb = [M; ones(1, n)];
 
 	weightedMb = weights*Mb';
-	Sl = Mb*weightedMb;	
-    Sl = updateS1(Sl, rWfreq, rW);
+	
+% 	Sl = Mb*weightedMb; % k+1 x k+1
+%   Sl = updateSl(Sl, rWfreq, rW);
+    
+    Sl = updateSl_(Mb, weightedMb, weights, rWfreq, rW);
+	
+	
 	q = ones(k+1, 1)*(1-noise);
 	q(end) = 1;
 
@@ -35,23 +40,49 @@ end
 
 end
 
-function S = updateS1(S1, rWfreq, rW)
+function S = updateSl(Sl, rWfreq, rW)
 % s1 mxn
-S = zeros(size(S1));
-N = size(S1, 2);
-if size(S1,1) == size(rW,1) + 1
+S = zeros(size(Sl));
+N = size(Sl, 2);
+if size(Sl,1) == size(rW,1) + 1
     for n = 1 : N
         M = [rW(:,n);1];
-        S = S + diag(M)*S1*diag(M)';
+        S = S + diag(M)*Sl*diag(M)';
     end
-    S = S / N;
     
-elseif size(S1,1) == size(rWfreq,1) + 1
+elseif size(Sl,1) == size(rWfreq,1) + 1
     for n = 1 : N
         M = [rWfreq(:,n);1];
-        S = S + diag(M)*S1*diag(M)';
+        S = S + diag(M)*Sl*diag(M)';
     end
-    S = S / N;
+end
+
+S = S ./ N;
+    
+end
+
+function S = updateSl_(M1, M2, weights, rWfreq, rW)
+% M1 is k+1 x n , M2 is n x k+1 weights is nxn diag
+% rWfreq is k x n, rW is L x n
+[K, N] = size(M1);
+S = zeros(size(K,K));
+
+if size(M1,1) == size(rW,1) + 1
+    for n = 1 : N
+        Sl = weights(n,n) * M1(:,n) * M2(n,:); % KxK
+        M = [rW(:,n);1];
+        S = S + diag(M)*Sl*diag(M)';
+    end
+    
+elseif size(M1,1) == size(rWfreq,1) + 1
+    for n = 1 : N
+        Sl = weights(n) * M1(:,n) * M2(n,:); % KxK
+        M = [rWfreq(:,n);1];
+        S = S + diag(M)*Sl*diag(M)';
+    end
+end
+
+S = S ./ N;
 end
 
 end

@@ -24,10 +24,10 @@ for i = 1
 		[xTr, yTr, xTe, yTe, valIdx] = loaddata(dataFolder, dimen);	
 	end
 
-% 	xTr = double(xTr(1:200,:));
-% 	xTe = double(xTe(1:200,:));
-    xTr = double(xTr);
-	xTe = double(xTe);
+	xTr = double(xTr(1:200,:));
+	xTe = double(xTe(1:200,:));
+%     xTr = double(xTr);
+% 	xTe = double(xTe);
 	yTr = double(yTr);
 	yTe = double(yTe);
 
