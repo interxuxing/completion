@@ -79,9 +79,7 @@ elseif size(Sl,1) == size(rWfreq,1) + 1
         S = S + diag(M)*Sl*diag(M)';
     end
 end
-
-S = S ./ N;
-    
+S = S ./ N;    
 end
 
 function S = updateSl_(M1, M2, weights, rWfreq, rW)
@@ -105,7 +103,6 @@ elseif size(M1,1) == size(rWfreq,1) + 1
     end
 end
 
-S = S ./ N;
 end
 
 

@@ -82,10 +82,9 @@ elseif size(M1,1) == size(rWfreq,1) + 1
     end
 end
 
-S = S ./ N;
 end
 
-end
+
 
 function P = updateP(P1, rW, rWfreq)
 % P kxk rWfreq kxN
@@ -105,5 +104,5 @@ elseif size(P1, 2) == size(rW,1) + 1
     end
 end
 
-P = P / N;
+P = P ./ N;
 end

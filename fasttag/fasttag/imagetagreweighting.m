@@ -27,6 +27,7 @@ semantic_dist = slmetric_pw(tagMatrix', tagMatrix', 'nrmcorr');
 row_max = max(semantic_dist,[],1);
 semantic_sim = semantic_dist ./ repmat(row_max,M,1);
 
+mu = 10;
 % reweighting for each tag in each image
 for l = 1 : M
     neg_index = find(label_indexes{l}.neg == 1);
@@ -42,7 +43,8 @@ for l = 1 : M
             vt_sem = 0;
         end
         try
-            vt(n) = exp(-(vt_vis + vt_sem)/2) / 2;
+%             vt(n) = exp(-(vt_vis + vt_sem)/2) / 2;
+            vt(n) = 1 / (1 + exp(vt_vis + mu * vt_sem));
         catch
             lasterr;
         end
